@@ -11,6 +11,7 @@
     "access": "public"
   },
   "scripts": {
+    "postinstall": "node ./scripts/postinstall.mjs",
     "prebuild": "rimraf ./dist",
     "build": "tsc && tsc-alias",
     "dev": "cross-env NODE_ENV=development ts-node-dev --respawn --transpile-only -r tsconfig-paths/register ./src/index.ts",
@@ -19,8 +20,10 @@
   },
   "dependencies": {
     "cac": "^6.7.12",
-    "ts-node-dev": "^1.1.8",
-    "shelljs": "^0.8.5"
+    "lodash": "^4.17.21",
+    "node-fetch": "^3.2.3",
+    "shelljs": "^0.8.5",
+    "ts-node-dev": "^1.1.8"
   },
   "devDependencies": {
     "@tsconfig/node14": "^1.0.1",

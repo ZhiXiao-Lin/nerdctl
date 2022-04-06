@@ -1,6 +1,7 @@
 {
   "extends": "@tsconfig/node14/tsconfig.json",
   "compilerOptions": {
+    "target": "ES5",
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "declaration": true,
