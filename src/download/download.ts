@@ -2,21 +2,21 @@
  * Helpers for downloading files.
  */
 
-import crypto from 'crypto';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { spawnSync } from 'child_process';
+import fetch, { RequestInfo } from "node-fetch";
 
-import fetch from 'node-fetch';
+import crypto from "crypto";
+import fs from "fs";
+import os from "os";
+import path from "path";
+import { spawnSync } from "child_process";
 
-async function fetchWithRetry(url) {
+async function fetchWithRetry(url: RequestInfo) {
   while (true) {
     try {
       return await fetch(url);
-    } catch (ex) {
-      if (ex && ex.errno === 'EAI_AGAIN') {
-        console.log(`Recoverable error downloading ${ url }, retrying...`);
+    } catch (ex: any) {
+      if (ex && ex.errno === "EAI_AGAIN") {
+        console.log(`Recoverable error downloading ${url}, retrying...`);
         continue;
       }
       console.dir(ex);
@@ -40,56 +40,71 @@ async function fetchWithRetry(url) {
  * @param {DownloadOptions} [options] Additional options for the download.
  * @returns {Promise<void>}
  */
-export async function download(url, destPath, options = {}) {
+export async function download(
+  url: any,
+  destPath: fs.PathLike,
+  options: any = {}
+) {
   const { expectedChecksum, overwrite } = options;
-  const checksumAlgorithm = options.checksumAlgorithm ?? 'sha256';
+  const checksumAlgorithm = options.checksumAlgorithm ?? "sha256";
   const access = options.access ?? fs.constants.X_OK;
 
   if (!overwrite) {
     try {
       await fs.promises.access(destPath, access);
-      console.log(`${ destPath } already exists, not re-downloading.`);
+      console.log(`${destPath} already exists, not re-downloading.`);
 
       return;
-    } catch (ex) {
-      if (ex.code !== 'ENOENT') {
+    } catch (ex: any) {
+      if (ex.code !== "ENOENT") {
         throw ex;
       }
     }
   }
-  console.log(`Downloading ${ url } to ${ destPath }...`);
-  await fs.promises.mkdir(path.dirname(destPath), { recursive: true });
+  console.log(`Downloading ${url} to ${destPath}...`);
+  await fs.promises.mkdir(path.dirname(destPath.toString()), {
+    recursive: true,
+  });
   const response = await fetchWithRetry(url);
 
   if (!response.ok) {
-    throw new Error(`Error downloading ${ url }: ${ response.statusText }`);
+    throw new Error(`Error downloading ${url}: ${response.statusText}`);
   }
-  const tempPath = `${ destPath }.download`;
+  const tempPath = `${destPath}.download`;
 
   try {
     const file = fs.createWriteStream(tempPath);
-    const promise = new Promise(resolve => file.on('finish', resolve));
+    const promise = new Promise((resolve) => file.on("finish", resolve));
 
-    response.body.pipe(file);
+    response.body!.pipe(file);
     await promise;
 
     if (expectedChecksum) {
-      const actualChecksum = await getChecksumForFile(tempPath, checksumAlgorithm);
+      const actualChecksum = await getChecksumForFile(
+        tempPath,
+        checksumAlgorithm
+      );
 
       if (actualChecksum !== expectedChecksum) {
-        throw new Error(`Expecting URL ${ url } to have ${ checksumAlgorithm } [${ expectedChecksum }], got [${ actualChecksum }]`);
+        throw new Error(
+          `Expecting URL ${url} to have ${checksumAlgorithm} [${expectedChecksum}], got [${actualChecksum}]`
+        );
       }
     }
     const mode =
-            (access & fs.constants.X_OK) ? 0o755 : (access & fs.constants.W_OK) ? 0o644 : 0o444;
+      access & fs.constants.X_OK
+        ? 0o755
+        : access & fs.constants.W_OK
+        ? 0o644
+        : 0o444;
 
     await fs.promises.chmod(tempPath, mode);
     await fs.promises.rename(tempPath, destPath);
   } finally {
     try {
       await fs.promises.unlink(tempPath);
-    } catch (ex) {
-      if (ex.code !== 'ENOENT') {
+    } catch (ex: any) {
+      if (ex.code !== "ENOENT") {
         console.error(ex);
       }
     }
@@ -102,15 +117,18 @@ export async function download(url, destPath, options = {}) {
  * @param {'sha256' | 'sha1'} checksumAlgorithm The checksum algorithm to use.
  * @returns {string} The hex-encoded checksum of the file.
  */
-async function getChecksumForFile(inputPath, checksumAlgorithm = 'sha256') {
+async function getChecksumForFile(
+  inputPath: fs.PathLike,
+  checksumAlgorithm = "sha256"
+) {
   const hash = crypto.createHash(checksumAlgorithm);
 
   await new Promise((resolve) => {
-    hash.on('finish', resolve);
+    hash.on("finish", resolve);
     fs.createReadStream(inputPath).pipe(hash);
   });
 
-  return hash.digest('hex');
+  return hash.digest("hex");
 }
 
 /**
@@ -118,11 +136,11 @@ async function getChecksumForFile(inputPath, checksumAlgorithm = 'sha256') {
  * @param {string} url The URL to download
  * @returns {string} The file contents.
  */
-export async function getResource(url) {
+export async function getResource(url: any) {
   const response = await fetchWithRetry(url);
 
   if (!response.ok) {
-    throw new Error(`Error downloading ${ url }`, response.statusText);
+    throw new Error(`Error downloading ${url} ${response.statusText}`);
   }
 
   return await response.text();
@@ -142,40 +160,57 @@ export async function getResource(url) {
  * @param options {ArchiveDownloadOptions} Additional options for the download.
  * @returns {Promise<string>} The full path of the final binary.
  */
-export async function downloadTarGZ(url, destPath, options = {}) {
+export async function downloadTarGZ(
+  url: any,
+  destPath: fs.PathLike,
+  options: any = {}
+) {
   const { overwrite } = options;
   const access = options.access ?? fs.constants.X_OK;
 
   if (!overwrite) {
     try {
       await fs.promises.access(destPath, access);
-      console.log(`${ destPath } already exists, not re-downloading.`);
+      console.log(`${destPath} already exists, not re-downloading.`);
 
       return destPath;
-    } catch (ex) {
-      if (ex.code !== 'ENOENT') {
+    } catch (ex: any) {
+      if (ex.code !== "ENOENT") {
         throw ex;
       }
     }
   }
-  const binaryBasename = path.basename(destPath, '.exe');
-  const workDir = fs.mkdtempSync(path.join(os.tmpdir(), `rd-${ binaryBasename }-`));
-  const fileToExtract = options.entryName || path.basename(destPath);
+  const binaryBasename = path.basename(destPath.toString(), ".exe");
+  const workDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), `rd-${binaryBasename}-`)
+  );
+  const fileToExtract = options.entryName || path.basename(destPath.toString());
 
   try {
-    const tgzPath = path.join(workDir, `${ binaryBasename }.tar.gz`);
-    const args = ['tar', '-zxvf', tgzPath, '--directory', workDir, fileToExtract];
+    const tgzPath = path.join(workDir, `${binaryBasename}.tar.gz`);
+    const args = [
+      "tar",
+      "-zxvf",
+      tgzPath,
+      "--directory",
+      workDir,
+      fileToExtract,
+    ];
     const mode =
-            (access & fs.constants.X_OK) ? 0o755 : (access & fs.constants.W_OK) ? 0o644 : 0o444;
+      access & fs.constants.X_OK
+        ? 0o755
+        : access & fs.constants.W_OK
+        ? 0o644
+        : 0o444;
 
     await download(url, tgzPath, { ...options, access: fs.constants.W_OK });
-    if (os.platform().startsWith('win')) {
+    if (os.platform().startsWith("win")) {
       // On Windows, force use the bundled bsdtar.
       // We may find GNU tar on the path, which looks at the Windows-style path
       // and considers C:\Temp to be a reference to a remote host named `C`.
-      args[0] = path.join(process.env.SystemRoot, 'system32', 'tar.exe');
+      args[0] = path.join(process.env.SystemRoot!, "system32", "tar.exe");
     }
-    spawnSync(args[0], args.slice(1), { stdio: 'inherit' });
+    spawnSync(args[0], args.slice(1), { stdio: "inherit" });
     fs.copyFileSync(path.join(workDir, fileToExtract), destPath);
     fs.chmodSync(destPath, mode);
   } finally {
@@ -194,34 +229,44 @@ export async function downloadTarGZ(url, destPath, options = {}) {
  * @param options {ArchiveDownloadOptions} Additional options for the download.
  * @returns {Promise<string>} The full path of the final binary.
  */
-export async function downloadZip(url, destPath, options = {}) {
+export async function downloadZip(
+  url: any,
+  destPath: fs.PathLike,
+  options: any = {}
+) {
   const { overwrite } = options;
   const access = options.access ?? fs.constants.X_OK;
 
   if (!overwrite) {
     try {
       await fs.promises.access(destPath, access);
-      console.log(`${ destPath } already exists, not re-downloading.`);
+      console.log(`${destPath} already exists, not re-downloading.`);
 
       return destPath;
-    } catch (ex) {
-      if (ex.code !== 'ENOENT') {
+    } catch (ex: any) {
+      if (ex.code !== "ENOENT") {
         throw ex;
       }
     }
   }
-  const binaryBasename = path.basename(destPath, '.exe');
-  const workDir = fs.mkdtempSync(path.join(os.tmpdir(), `rd-${ binaryBasename }-`));
-  const fileToExtract = options.entryName || path.basename(destPath);
+  const binaryBasename = path.basename(destPath.toString(), ".exe");
+  const workDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), `rd-${binaryBasename}-`)
+  );
+  const fileToExtract = options.entryName || path.basename(destPath.toString());
   const mode =
-        (access & fs.constants.X_OK) ? 0o755 : (access & fs.constants.W_OK) ? 0o644 : 0o444;
+    access & fs.constants.X_OK
+      ? 0o755
+      : access & fs.constants.W_OK
+      ? 0o644
+      : 0o444;
 
   try {
-    const zipPath = path.join(workDir, `${ binaryBasename }.tar.gz`);
-    const args = ['unzip', '-o', zipPath, fileToExtract, '-d', workDir];
+    const zipPath = path.join(workDir, `${binaryBasename}.tar.gz`);
+    const args = ["unzip", "-o", zipPath, fileToExtract, "-d", workDir];
 
     await download(url, zipPath, { ...options, access: fs.constants.W_OK });
-    spawnSync(args[0], args.slice(1), { stdio: 'inherit' });
+    spawnSync(args[0], args.slice(1), { stdio: "inherit" });
     fs.copyFileSync(path.join(workDir, fileToExtract), destPath);
     fs.chmodSync(destPath, mode);
   } finally {
