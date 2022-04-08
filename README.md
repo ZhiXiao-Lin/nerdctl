@@ -22,4 +22,4 @@ await engine.run(IMAGE);
 
 ## License
 
-Nest is [MIT licensed](LICENSE).
+Node nerdctl is [MIT licensed](LICENSE).
