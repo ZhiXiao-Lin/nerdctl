@@ -1,9 +1,10 @@
 import { factory } from "..";
 
-describe("engine", () => {
+describe("images", () => {
   const engine = factory();
   const IMAGE = "hello-world";
-  test("The image should be pulled correctly", async () => {
+
+  test("pull image", async () => {
     const result = await engine.pullImage(IMAGE);
     expect(result.exitCode).toBeNull();
   });
