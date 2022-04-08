@@ -7,8 +7,8 @@
     "declaration": true,
     "declarationDir": "dist",
     "module": "commonjs",
-    "baseUrl": ".",
     "outDir": "dist",
+    "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     }
