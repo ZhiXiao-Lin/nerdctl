@@ -19,3 +19,7 @@ const IMAGE = "hello-world";
 await engine.pullImage(IMAGE);
 await engine.run(IMAGE);
 ```
+
+## License
+
+Nest is [MIT licensed](LICENSE).
