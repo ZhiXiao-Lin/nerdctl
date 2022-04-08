@@ -3,4 +3,5 @@ src/
 .vscode
 /coverage/
 /.idea/
+/docs/
 .husky/
