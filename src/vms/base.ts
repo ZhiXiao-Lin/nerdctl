@@ -5,6 +5,7 @@ import { ExecOptions, exec } from "shelljs";
 import { ChildProcess } from "child_process";
 import { GlobalFlags } from "@/types/global";
 import { ImageResult } from "@/types/images";
+import { paramCase } from "change-case";
 import { platform } from "@/utils";
 
 export default abstract class BaseBackend {
@@ -42,7 +43,7 @@ export default abstract class BaseBackend {
     const flagParams: string[] = [];
     if (flags) {
       for (const [key, value] of Object.entries(flags)) {
-        const flag = `--${key}`;
+        const flag = `--${paramCase(key)}`;
         if (typeof value === "boolean") {
           flagParams.push(flag);
         }

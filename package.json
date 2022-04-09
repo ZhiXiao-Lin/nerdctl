@@ -23,6 +23,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "change-case": "^4.1.2",
     "lodash": "^4.17.21",
     "node-fetch": "2",
     "shelljs": "^0.8.5",
