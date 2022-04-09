@@ -1,4 +1,8 @@
-import { ContainerCommandFlags, RunCommandFlags } from "@/types/container";
+import {
+  ContainerCommandFlags,
+  LogsCommandFlags,
+  RunCommandFlags,
+} from "@/types/container";
 
 import BaseBackend from "./base";
 import { ChildProcess } from "child_process";
@@ -38,6 +42,15 @@ export default class LimaBackend extends BaseBackend {
     return (await this.exec(
       `${this.container} rm ${this.mergeFlags(flags)} ${container}`,
       { async: false }
+    )) as ChildProcess;
+  }
+
+  async logs(
+    container: string,
+    flags?: LogsCommandFlags
+  ): Promise<ChildProcess> {
+    return (await this.exec(
+      `${this.container} logs ${this.mergeFlags(flags)} ${container}`
     )) as ChildProcess;
   }
   //#endregion

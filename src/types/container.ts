@@ -57,4 +57,12 @@ export interface RunCommandFlags extends GlobalFlags {
   workdir?: string;
 }
 
+export interface LogsCommandFlags extends GlobalFlags {
+  follow?: boolean;
+  since?: string;
+  tail?: string;
+  timestamps?: boolean;
+  until?: string;
+}
+
 export interface ContainerCommandFlags extends GlobalFlags {}
