@@ -5,6 +5,7 @@ import { ExecOptions, exec } from "shelljs";
 import { ChildProcess } from "child_process";
 import { GlobalFlags } from "@/types/global";
 import { ImageResult } from "@/types/images";
+import { LoginCommandFlags } from "@/types/registry";
 import { paramCase } from "change-case";
 import { platform } from "@/utils";
 
@@ -64,6 +65,11 @@ export default abstract class BaseBackend {
 
   abstract init(): Promise<void>;
   abstract start(): Promise<void>;
+
+  abstract login(
+    flags?: LoginCommandFlags,
+    server?: string
+  ): Promise<ExecResult>;
 
   abstract run(
     image: string,
