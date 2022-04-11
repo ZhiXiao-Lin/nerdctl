@@ -2,6 +2,7 @@ import {
   LogsCommandFlags,
   RmCommandFlags,
   RunCommandFlags,
+  StopCommandFlags,
 } from "@/types/container";
 
 import BaseBackend from "./base";
@@ -47,9 +48,28 @@ export default class LimaBackend extends BaseBackend {
     });
   }
 
-  async rm(container: string, flags?: RmCommandFlags): Promise<ShellString> {
+  async stop(
+    container: string | string[],
+    flags?: StopCommandFlags
+  ): Promise<ShellString> {
+    const containers = Array.isArray(container)
+      ? container.join(" ")
+      : container;
     return (await this.exec(
-      `${this.container} rm ${this.mergeFlags(flags)} ${container}`,
+      `${this.container} stop ${this.mergeFlags(flags)} ${containers}`,
+      { async: false }
+    )) as ShellString;
+  }
+
+  async rm(
+    container: string | string[],
+    flags?: RmCommandFlags
+  ): Promise<ShellString> {
+    const containers = Array.isArray(container)
+      ? container.join(" ")
+      : container;
+    return (await this.exec(
+      `${this.container} rm ${this.mergeFlags(flags)} ${containers}`,
       { async: false }
     )) as ShellString;
   }

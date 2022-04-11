@@ -76,7 +76,14 @@ export default abstract class BaseBackend {
     flags?: RunCommandFlags
   ): Promise<ExecResult | string>;
 
-  abstract rm(container: string, flags?: RmCommandFlags): Promise<ShellString>;
+  abstract stop(
+    container: string | string[],
+    flags?: RmCommandFlags
+  ): Promise<ShellString>;
+  abstract rm(
+    container: string | string[],
+    flags?: RmCommandFlags
+  ): Promise<ShellString>;
 
   abstract pullImage(image: string): Promise<ChildProcess>;
   abstract getImages(): Promise<ImageResult[]>;
