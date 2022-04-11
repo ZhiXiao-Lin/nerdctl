@@ -65,4 +65,7 @@ export interface LogsCommandFlags extends GlobalFlags {
   until?: string;
 }
 
-export interface ContainerCommandFlags extends GlobalFlags {}
+export interface RmCommandFlags extends GlobalFlags {
+  force?: boolean;
+  volumes?: boolean;
+}

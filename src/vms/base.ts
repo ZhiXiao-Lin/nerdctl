@@ -1,6 +1,6 @@
 import { Architecture, ExecResult } from "@/types";
-import { ContainerCommandFlags, RunCommandFlags } from "@/types/container";
-import { ExecOptions, exec } from "shelljs";
+import { ExecOptions, ShellString, exec } from "shelljs";
+import { RmCommandFlags, RunCommandFlags } from "@/types/container";
 
 import { ChildProcess } from "child_process";
 import { GlobalFlags } from "@/types/global";
@@ -76,10 +76,7 @@ export default abstract class BaseBackend {
     flags?: RunCommandFlags
   ): Promise<ExecResult | string>;
 
-  abstract rm(
-    container: string,
-    flags?: ContainerCommandFlags
-  ): Promise<ChildProcess>;
+  abstract rm(container: string, flags?: RmCommandFlags): Promise<ShellString>;
 
   abstract pullImage(image: string): Promise<ChildProcess>;
   abstract getImages(): Promise<ImageResult[]>;

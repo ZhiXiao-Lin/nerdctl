@@ -1,6 +1,6 @@
 import {
-  ContainerCommandFlags,
   LogsCommandFlags,
+  RmCommandFlags,
   RunCommandFlags,
 } from "@/types/container";
 
@@ -9,6 +9,7 @@ import { ChildProcess } from "child_process";
 import { ExecResult } from "@/types";
 import { ImageResult } from "@/types/images";
 import { LoginCommandFlags } from "@/types/registry";
+import { ShellString } from "shelljs";
 
 export default class LimaBackend extends BaseBackend {
   async init(): Promise<void> {}
@@ -46,14 +47,11 @@ export default class LimaBackend extends BaseBackend {
     });
   }
 
-  async rm(
-    container: string,
-    flags?: ContainerCommandFlags
-  ): Promise<ChildProcess> {
+  async rm(container: string, flags?: RmCommandFlags): Promise<ShellString> {
     return (await this.exec(
       `${this.container} rm ${this.mergeFlags(flags)} ${container}`,
       { async: false }
-    )) as ChildProcess;
+    )) as ShellString;
   }
 
   async logs(
