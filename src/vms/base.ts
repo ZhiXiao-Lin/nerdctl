@@ -69,12 +69,9 @@ export default abstract class BaseBackend {
   abstract login(
     flags?: LoginCommandFlags,
     server?: string
-  ): Promise<ExecResult>;
+  ): Promise<ShellString>;
 
-  abstract run(
-    image: string,
-    flags?: RunCommandFlags
-  ): Promise<ExecResult | string>;
+  abstract run(image: string, flags?: RunCommandFlags): Promise<ChildProcess>;
 
   abstract stop(
     container: string | string[],

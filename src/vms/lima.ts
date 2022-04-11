@@ -18,34 +18,22 @@ export default class LimaBackend extends BaseBackend {
   async start(): Promise<void> {}
 
   //#region registry
-  async login(flags?: LoginCommandFlags, server?: string): Promise<ExecResult> {
+  async login(
+    flags?: LoginCommandFlags,
+    server?: string
+  ): Promise<ShellString> {
     const command = `${this.container} login ${this.mergeFlags(
       flags
     )} ${server}`;
 
-    return await this.exec(command, { async: false });
+    return (await this.exec(command, { async: false })) as ShellString;
   }
   //#endregion
 
   //#region containers
-  async run(
-    image: string,
-    flags?: RunCommandFlags
-  ): Promise<ExecResult | string> {
+  async run(image: string, flags?: RunCommandFlags): Promise<ChildProcess> {
     const command = `${this.container} run ${this.mergeFlags(flags)} ${image}`;
-
-    if (!flags?.detach) {
-      return await this.exec(command, { async: false });
-    }
-
-    const child = (await this.exec(command)) as ChildProcess;
-
-    return new Promise((resove, reject) => {
-      child.stdout!.on("data", (data) => {
-        if (!data) reject("");
-        resove(data);
-      });
-    });
+    return (await this.exec(command)) as ChildProcess;
   }
 
   async stop(
