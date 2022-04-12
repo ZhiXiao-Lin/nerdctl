@@ -45,6 +45,11 @@ export default abstract class BaseBackend {
     if (flags) {
       for (const [key, value] of Object.entries(flags)) {
         const flag = `--${paramCase(key)}`;
+        if (Array.isArray(value)) {
+          value.forEach((val) => {
+            flagParams.push(`${flag} ${val}`);
+          });
+        }
         if (typeof value === "boolean") {
           flagParams.push(flag);
         }

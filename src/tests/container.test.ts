@@ -1,3 +1,4 @@
+import { ChildProcess } from "child_process";
 import { factory } from "..";
 
 describe("container", () => {
@@ -5,10 +6,17 @@ describe("container", () => {
   const IMAGE = "hello-world";
   const NAME = "hello";
 
-  test("rm", async () => {
-    await engine.run(IMAGE, { name: NAME, detach: true });
-    const result = await engine.rm(NAME, { force: true });
+  test("run", async () => {
+    const result = (await engine.run(IMAGE, {
+      name: NAME,
+      detach: true,
+    })) as ChildProcess;
+    expect(result.exitCode).toBeNull();
+  });
 
-    expect(result.code).toEqual(0);
+  afterAll(() => {
+    (async () => {
+      await engine.rm(IMAGE);
+    })();
   });
 });

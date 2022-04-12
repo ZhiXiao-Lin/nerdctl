@@ -84,9 +84,16 @@ export default class LimaBackend extends BaseBackend {
 
     return new Promise((resolve, reject) => {
       if (!!child.exitCode) reject(null);
+
+      const images: ImageResult[] = [];
+
       child.stdout!.on("data", (data) => {
-        if (!data) reject(null);
-        resolve(JSON.parse(data));
+        if (!data) return;
+        images.push(JSON.parse(data));
+      });
+
+      child.stdout!.on("close", () => {
+        resolve(images);
       });
     });
   }
