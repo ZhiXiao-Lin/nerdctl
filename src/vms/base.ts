@@ -1,6 +1,10 @@
 import { Architecture, ExecResult } from "@/types";
 import { ExecOptions, ShellString, exec } from "shelljs";
-import { RmCommandFlags, RunCommandFlags } from "@/types/container";
+import {
+  LogsCommandFlags,
+  RmCommandFlags,
+  RunCommandFlags,
+} from "@/types/container";
 
 import { ChildProcess } from "child_process";
 import { GlobalFlags } from "@/types/global";
@@ -14,23 +18,17 @@ export default abstract class BaseBackend {
   protected readonly arch: Architecture;
   protected readonly platform: string = platform;
 
-  protected readonly vm = "limactl";
-  protected readonly runtime = "nerdctl";
+  protected readonly vm: string = "limactl";
+  protected readonly instance: string = "default";
+  protected readonly runtime: string = "nerdctl";
 
-  constructor(arch: Architecture) {
+  constructor(arch: Architecture, instance: string = "default") {
     this.arch = arch;
+    this.instance = instance;
   }
 
   get container() {
     return `${this.vm} shell ${this.instance} ${this.runtime}`;
-  }
-
-  #instance = "default";
-  get instance() {
-    return this.#instance;
-  }
-  set instance(instance: string) {
-    this.#instance = instance;
   }
 
   protected async exec(
@@ -68,8 +66,10 @@ export default abstract class BaseBackend {
     return params;
   }
 
-  abstract init(): Promise<void>;
-  abstract start(): Promise<void>;
+  abstract initVM(): Promise<boolean>;
+  abstract startVM(): Promise<ChildProcess>;
+  abstract stopVM(): Promise<void>;
+  abstract deleteVM(): Promise<void>;
 
   abstract login(
     flags?: LoginCommandFlags,
@@ -86,6 +86,11 @@ export default abstract class BaseBackend {
     container: string | string[],
     flags?: RmCommandFlags
   ): Promise<ShellString>;
+
+  abstract logs(
+    container: string,
+    flags?: LogsCommandFlags
+  ): Promise<ChildProcess>;
 
   abstract pullImage(image: string): Promise<ChildProcess>;
   abstract getImages(): Promise<ImageResult[]>;
