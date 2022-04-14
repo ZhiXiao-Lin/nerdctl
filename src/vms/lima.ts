@@ -4,16 +4,35 @@ import {
   RunCommandFlags,
   StopCommandFlags,
 } from "@/types/container";
+import { ShellString, which } from "shelljs";
 
 import BaseBackend from "./base";
 import { ChildProcess } from "child_process";
 import { ImageResult } from "@/types/images";
 import { LimaListResult } from "@/types/lima";
 import { LoginCommandFlags } from "@/types/registry";
-import { ShellString } from "shelljs";
 
 export default class LimaBackend extends BaseBackend {
   async initVM(): Promise<boolean> {
+    if (!which("brew")) return false;
+    if (!which(this.vm)) {
+      const child = (await this.exec(`brew install lima`)) as ChildProcess;
+      await new Promise((resolve, reject) => {
+        child?.stdout?.on("data", (data) => {
+          console.log(data);
+        });
+        child?.stdout?.on("close", () => {
+          resolve(true);
+        });
+        child?.stderr?.on("data", (data) => {
+          console.log(data);
+        });
+        child?.stderr?.on("close", () => {
+          reject(false);
+        });
+      });
+    }
+
     const listChild = (await this.exec(
       `${this.vm} list --json`
     )) as ChildProcess;
