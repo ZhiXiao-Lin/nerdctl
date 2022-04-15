@@ -4,6 +4,7 @@ import {
   LogsCommandFlags,
   RmCommandFlags,
   RunCommandFlags,
+  StopCommandFlags,
 } from "@/types/container";
 
 import { ChildProcess } from "child_process";
@@ -22,12 +23,19 @@ export default abstract class BaseBackend {
   protected readonly instance: string = "default";
   protected readonly runtime: string = "nerdctl";
 
-  constructor(arch: Architecture, instance: string = "default") {
+  constructor(
+    arch: Architecture,
+    vm: string = "limactl",
+    instance: string = "default"
+  ) {
     this.arch = arch;
+    this.vm = vm;
     this.instance = instance;
   }
 
   get container() {
+    if (this.platform !== "darwin")
+      return `${this.vm} -e XDG_RUNTIME_DIR=/run/user/$(id -u) ${this.runtime}`;
     return `${this.vm} shell ${this.instance} ${this.runtime}`;
   }
 
@@ -67,31 +75,89 @@ export default abstract class BaseBackend {
   }
 
   abstract initVM(): Promise<boolean>;
-  abstract startVM(): Promise<ChildProcess>;
+  abstract startVM(): Promise<ChildProcess | null>;
   abstract stopVM(): Promise<void>;
   abstract deleteVM(): Promise<void>;
 
-  abstract login(
+  //#region registry
+  async login(
     flags?: LoginCommandFlags,
     server?: string
-  ): Promise<ShellString>;
+  ): Promise<ShellString> {
+    const command = `${this.container} login ${this.mergeFlags(
+      flags
+    )} ${server}`;
 
-  abstract run(image: string, flags?: RunCommandFlags): Promise<ChildProcess>;
+    return (await this.exec(command, { async: false })) as ShellString;
+  }
+  //#endregion
 
-  abstract stop(
+  //#region containers
+  async run(image: string, flags?: RunCommandFlags): Promise<ChildProcess> {
+    const command = `${this.container} run ${this.mergeFlags(flags)} ${image}`;
+    return (await this.exec(command)) as ChildProcess;
+  }
+
+  async stop(
+    container: string | string[],
+    flags?: StopCommandFlags
+  ): Promise<ShellString> {
+    const containers = Array.isArray(container)
+      ? container.join(" ")
+      : container;
+    return (await this.exec(
+      `${this.container} stop ${this.mergeFlags(flags)} ${containers}`,
+      { async: false }
+    )) as ShellString;
+  }
+
+  async rm(
     container: string | string[],
     flags?: RmCommandFlags
-  ): Promise<ShellString>;
-  abstract rm(
-    container: string | string[],
-    flags?: RmCommandFlags
-  ): Promise<ShellString>;
+  ): Promise<ShellString> {
+    const containers = Array.isArray(container)
+      ? container.join(" ")
+      : container;
+    return (await this.exec(
+      `${this.container} rm ${this.mergeFlags(flags)} ${containers}`,
+      { async: false }
+    )) as ShellString;
+  }
 
-  abstract logs(
+  async logs(
     container: string,
     flags?: LogsCommandFlags
-  ): Promise<ChildProcess>;
+  ): Promise<ChildProcess> {
+    return (await this.exec(
+      `${this.container} logs ${this.mergeFlags(flags)} ${container}`
+    )) as ChildProcess;
+  }
+  //#endregion
 
-  abstract pullImage(image: string): Promise<ChildProcess>;
-  abstract getImages(): Promise<ImageResult[]>;
+  //#region images
+  async pullImage(image: string): Promise<ChildProcess> {
+    return (await this.exec(`${this.container} pull ${image}`)) as ChildProcess;
+  }
+
+  async getImages(): Promise<ImageResult[]> {
+    const child = (await this.exec(
+      `${this.container} images --format "{{json .}}"`
+    )) as ChildProcess;
+
+    return new Promise((resolve, reject) => {
+      if (!!child.exitCode) reject(null);
+
+      const images: ImageResult[] = [];
+
+      child.stdout!.on("data", (data) => {
+        if (!data) return;
+        images.push(JSON.parse(data));
+      });
+
+      child.stdout!.on("close", () => {
+        resolve(images);
+      });
+    });
+  }
+  //#endregion
 }
