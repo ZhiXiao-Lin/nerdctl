@@ -90,6 +90,12 @@ export default abstract class BaseBackend {
 
     return (await this.exec(command, { async: false })) as ShellString;
   }
+
+  async logout(server?: string): Promise<ShellString> {
+    const command = `${this.container} logout ${server}`;
+
+    return (await this.exec(command, { async: false })) as ShellString;
+  }
   //#endregion
 
   //#region containers

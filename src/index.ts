@@ -1,5 +1,3 @@
-import { ChildProcess, exec } from "child_process";
-
 import BaseBackend from "@/vms/base";
 import LimaBackend from "@/vms/lima";
 import WslBackend from "@/vms/wsl";
