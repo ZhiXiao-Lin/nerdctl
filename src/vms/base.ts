@@ -117,7 +117,7 @@ export default abstract class BaseBackend {
     )) as ShellString;
   }
 
-  async rm(
+  async remove(
     container: string | string[],
     flags?: RmCommandFlags
   ): Promise<ShellString> {
@@ -164,6 +164,18 @@ export default abstract class BaseBackend {
         resolve(images);
       });
     });
+  }
+
+  async removeImage(
+    image: string | string[],
+    flags?: RunCommandFlags
+  ): Promise<ShellString> {
+    const images = Array.isArray(image) ? image.join(" ") : image;
+
+    return (await this.exec(
+      `${this.container} rmi ${this.mergeFlags(flags)} ${images}`,
+      { async: false }
+    )) as ShellString;
   }
   //#endregion
 }
