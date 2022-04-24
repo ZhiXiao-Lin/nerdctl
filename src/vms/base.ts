@@ -1,15 +1,15 @@
 import { Architecture, ExecResult } from "@/types";
 import { ExecOptions, ShellString, exec } from "shelljs";
+import { ImageResult, RemoveImageCommandFlags } from "@/types/images";
 import {
   LogsCommandFlags,
-  RmCommandFlags,
+  RemoveCommandFlags,
   RunCommandFlags,
   StopCommandFlags,
 } from "@/types/container";
 
 import { ChildProcess } from "child_process";
 import { GlobalFlags } from "@/types/global";
-import { ImageResult } from "@/types/images";
 import { LoginCommandFlags } from "@/types/registry";
 import { paramCase } from "change-case";
 import { platform } from "@/utils";
@@ -119,7 +119,7 @@ export default abstract class BaseBackend {
 
   async remove(
     container: string | string[],
-    flags?: RmCommandFlags
+    flags?: RemoveCommandFlags
   ): Promise<ShellString> {
     const containers = Array.isArray(container)
       ? container.join(" ")
@@ -168,7 +168,7 @@ export default abstract class BaseBackend {
 
   async removeImage(
     image: string | string[],
-    flags?: RunCommandFlags
+    flags?: RemoveImageCommandFlags
   ): Promise<ShellString> {
     const images = Array.isArray(image) ? image.join(" ") : image;
 
