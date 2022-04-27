@@ -111,7 +111,7 @@ export default abstract class BaseBackend {
     )) as ShellString;
   }
 
-  async rm(
+  async remove(
     container: string | string[],
     flags?: RmCommandFlags
   ): Promise<ShellString> {

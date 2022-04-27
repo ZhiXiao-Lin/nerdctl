@@ -22,3 +22,16 @@ export function factory(
       throw new Error(`OS "${platform}" is not supported.`);
   }
 }
+
+async function test() {
+  const vm = factory("wsl -u vmenv");
+  const images = await vm.getImages();
+  console.log(images);
+  await vm.pullImage("hello-world");
+
+  const container = await vm.run('hello-world', { detach: true });
+
+  vm.
+}
+
+test();

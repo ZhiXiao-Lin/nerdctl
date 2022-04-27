@@ -16,7 +16,7 @@ describe("container", () => {
 
   afterAll(() => {
     (async () => {
-      await engine.rm(IMAGE);
+      await engine.remove(IMAGE);
     })();
   });
 });
