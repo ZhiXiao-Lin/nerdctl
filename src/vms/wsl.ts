@@ -14,7 +14,6 @@ export default class WslBackend extends BaseBackend {
 
   async initVM(): Promise<boolean> {
     if (!which("wsl")) return false;
-    if (!which(this.runtime)) return false;
     return true;
   }
 

@@ -1,13 +1,15 @@
 import BaseBackend from "./base";
 import { ChildProcess } from "child_process";
 import { LimaListResult } from "@/types/lima";
+import { isM1 } from "@/utils";
 import { which } from "shelljs";
 
 export default class LimaBackend extends BaseBackend {
   async initVM(): Promise<boolean> {
     if (!which("brew")) return false;
     if (!which(this.vm)) {
-      const child = (await this.exec(`brew install lima`)) as ChildProcess;
+      const command = `${isM1 ? `arch -arm64 ` : ""}brew install lima`;
+      const child = (await this.exec(command)) as ChildProcess;
       await new Promise((resolve, reject) => {
         child?.stdout?.on("data", (data) => {
           console.log(data);

@@ -69,7 +69,7 @@ export interface StopCommandFlags extends GlobalFlags {
   time?: string;
 }
 
-export interface RmCommandFlags extends GlobalFlags {
+export interface RemoveCommandFlags extends GlobalFlags {
   force?: boolean;
   volumes?: boolean;
 }

@@ -1,5 +1,3 @@
-import { ChildProcess, exec } from "child_process";
-
 import BaseBackend from "@/vms/base";
 import LimaBackend from "@/vms/lima";
 import WslBackend from "@/vms/wsl";
@@ -25,13 +23,17 @@ export function factory(
 
 async function test() {
   const vm = factory("wsl -u vmenv");
-  const images = await vm.getImages();
-  console.log(images);
-  await vm.pullImage("hello-world");
-
-  const container = await vm.run('hello-world', { detach: true });
-
-  vm.
+  console.log(await vm.getImages());
+  const child = await vm.pullImage("hello-world");
+  await new Promise((resolve, reject) => {
+    child.stderr?.on("data", (data) => {
+      console.log(data);
+    });
+    child.stdout?.on("close", () => {
+      resolve(true);
+    });
+  });
+  console.log(await vm.getImages());
 }
 
 test();
