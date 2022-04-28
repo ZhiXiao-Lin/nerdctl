@@ -27,7 +27,7 @@ sudo apt update && sudo apt upgrade -y
 
 # Add distrod to the GuestOS
 curl -L -O "https://raw.githubusercontent.com/nullpo-head/wsl-distrod/main/install.sh"
-chmod +x install.sh
+sudo chmod +x install.sh
 sudo ./install.sh install
 
 # Enable systemd
