@@ -22,6 +22,7 @@ wsl --install -d Ubuntu-20.04
 
 # Set user and password
 # Keep up to date
+wsl -d Ubuntu-20.04
 sudo apt update && sudo apt upgrade -y
 
 # Add distrod to the GuestOS
