@@ -9,9 +9,6 @@ Node wrapper for nerdctl
 ```shell
 # Install Homebrew
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Install Lima
-brew install lima
 ```
 
 ## Windows
@@ -73,15 +70,23 @@ yarn add nerdctl
 ```ts
 import { factory } from "nerdctl";
 
-const engine = factory();
+const callback: ProcessCallback = (data) => {
+  console.log(data);
+};
 
-await engine.initVM();
-await engine.startVM();
+const vm = factory();
+if (!(await vm.checkVM())) {
+  await vm.initVM(callback);
+}
+if (!(await vm.checkInstance())) {
+  await vm.initInstance(callback);
+}
 
 const IMAGE = "hello-world";
 
-await engine.pullImage(IMAGE);
-await engine.run(IMAGE);
+await vm.pullImage(IMAGE, callback);
+await vm.run(IMAGE, { rm: true }, callback);
+await vm.removeImage(IMAGE);
 ```
 
 ## License

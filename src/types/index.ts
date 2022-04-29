@@ -1,10 +1,6 @@
-import { ChildProcess } from "child_process";
-import { ShellString } from "shelljs";
-
 export type Architecture = "x86_64" | "aarch64";
 
-export type ExecResult = ChildProcess | ShellString | null;
-
+export type ProcessCallback = (data: string) => void;
 export interface ChildResultType {
   stdout: string;
   stderr: string;

@@ -1,31 +1,11 @@
 import BaseBackend from "./base";
 import { ChildProcess } from "child_process";
 import { LimaListResult } from "@/types/lima";
+import { ProcessCallback } from "@/types";
 import { isM1 } from "@/utils";
-import { which } from "shelljs";
 
 export default class LimaBackend extends BaseBackend {
-  async initVM(): Promise<boolean> {
-    if (!which("brew")) return false;
-    if (!which(this.vm)) {
-      const command = `${isM1 ? `arch -arm64 ` : ""}brew install lima`;
-      const child = (await this.exec(command)) as ChildProcess;
-      await new Promise((resolve, reject) => {
-        child?.stdout?.on("data", (data) => {
-          console.log(data);
-        });
-        child?.stdout?.on("close", () => {
-          resolve(true);
-        });
-        child?.stderr?.on("data", (data) => {
-          console.log(data);
-        });
-        child?.stderr?.on("close", () => {
-          reject(false);
-        });
-      });
-    }
-
+  async checkInstance(): Promise<boolean> {
     const listChild = (await this.exec(
       `${this.vm} list --json`
     )) as ChildProcess;
@@ -53,17 +33,15 @@ export default class LimaBackend extends BaseBackend {
     return true;
   }
 
-  async startVM(): Promise<ChildProcess> {
-    return (await this.exec(
-      `${this.vm} start ${this.instance}`
-    )) as ChildProcess;
+  async initVM(callback?: ProcessCallback): Promise<boolean> {
+    const command = `${isM1 ? `arch -arm64 ` : ""}brew install lima`;
+
+    return await this.fork(command, callback);
   }
 
-  async stopVM(): Promise<void> {
-    await this.exec(`${this.vm} stop ${this.instance}`);
-  }
+  async initInstance(callback?: ProcessCallback): Promise<boolean> {
+    const command = `${this.vm} start ${this.instance}`;
 
-  async deleteVM(): Promise<void> {
-    await this.exec(`${this.vm} delete ${this.instance}`);
+    return await this.fork(command, callback);
   }
 }
