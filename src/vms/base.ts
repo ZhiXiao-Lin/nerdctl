@@ -1,5 +1,4 @@
 import { Architecture, ProcessCallback } from "@/types";
-import { ExecOptions, ShellString, exec, which } from "shelljs";
 import { ImageResult, RemoveImageCommandFlags } from "@/types/images";
 import {
   LogsCommandFlags,
@@ -7,8 +6,8 @@ import {
   RunCommandFlags,
   StopCommandFlags,
 } from "@/types/container";
+import { exec, execSync } from "child_process";
 
-import { ChildProcess } from "child_process";
 import { GlobalFlags } from "@/types/global";
 import { LoginCommandFlags } from "@/types/registry";
 import { paramCase } from "change-case";
@@ -44,7 +43,7 @@ export default abstract class BaseBackend {
     command: string,
     callback?: ProcessCallback
   ): Promise<boolean> {
-    const child = (await this.exec(command)) as ChildProcess;
+    const child = exec(command);
 
     return await new Promise((resolve) => {
       child?.stdout?.on("data", (data) => {
@@ -62,22 +61,12 @@ export default abstract class BaseBackend {
     });
   }
 
-  protected async execSync(
-    command: string,
-    options?: Omit<ExecOptions, "async">
-  ): Promise<ShellString> {
-    return exec(command, {
-      silent: true,
-      async: false,
-      ...options,
-    }) as ShellString;
+  protected execSync(command: string): string {
+    return execSync(command).toString();
   }
 
-  protected async exec(
-    command: string,
-    options?: Omit<ExecOptions, "async">
-  ): Promise<ChildProcess> {
-    return exec(command, { silent: true, async: true, ...options });
+  protected which(command: string) {
+    return this.execSync(`which ${command}`);
   }
 
   protected mergeFlags(flags?: GlobalFlags): string {
@@ -111,7 +100,7 @@ export default abstract class BaseBackend {
 
   //#region VMs
   async checkVM(): Promise<boolean> {
-    return !!which(this.vm);
+    return !!this.which(this.vm);
   }
   async checkInstance(): Promise<boolean> {
     return true;
@@ -125,21 +114,18 @@ export default abstract class BaseBackend {
   //#endregion
 
   //#region registry
-  async login(
-    flags?: LoginCommandFlags,
-    server?: string
-  ): Promise<ShellString> {
+  login(flags?: LoginCommandFlags, server?: string): string {
     const command = `${this.container} login ${this.mergeFlags(
       flags
     )} ${server}`;
 
-    return await this.execSync(command);
+    return this.execSync(command);
   }
 
-  async logout(server?: string): Promise<ShellString> {
+  logout(server?: string): string {
     const command = `${this.container} logout ${server}`;
 
-    return await this.execSync(command);
+    return this.execSync(command);
   }
   //#endregion
 
@@ -154,10 +140,7 @@ export default abstract class BaseBackend {
     return await this.fork(command, callback);
   }
 
-  async stop(
-    container: string | string[],
-    flags?: StopCommandFlags
-  ): Promise<ShellString> {
+  stop(container: string | string[], flags?: StopCommandFlags): string {
     const containers = Array.isArray(container)
       ? container.join(" ")
       : container;
@@ -165,13 +148,10 @@ export default abstract class BaseBackend {
       flags
     )} ${containers}`;
 
-    return await this.execSync(command);
+    return this.execSync(command);
   }
 
-  async remove(
-    container: string | string[],
-    flags?: RemoveCommandFlags
-  ): Promise<ShellString> {
+  remove(container: string | string[], flags?: RemoveCommandFlags): string {
     const containers = Array.isArray(container)
       ? container.join(" ")
       : container;
@@ -179,7 +159,7 @@ export default abstract class BaseBackend {
       flags
     )} ${containers}`;
 
-    return await this.execSync(command);
+    return this.execSync(command);
   }
 
   async logs(container: string, flags?: LogsCommandFlags): Promise<boolean> {
@@ -199,9 +179,7 @@ export default abstract class BaseBackend {
   }
 
   async getImages(): Promise<ImageResult[]> {
-    const child = (await this.exec(
-      `${this.container} images --format "{{json .}}"`
-    )) as ChildProcess;
+    const child = exec(`${this.container} images --format "{{json .}}"`);
 
     return new Promise((resolve, reject) => {
       if (!!child.exitCode) reject(null);
@@ -219,14 +197,14 @@ export default abstract class BaseBackend {
     });
   }
 
-  async removeImage(
+  removeImage(
     image: string | string[],
     flags?: RemoveImageCommandFlags
-  ): Promise<ShellString> {
+  ): string {
     const images = Array.isArray(image) ? image.join(" ") : image;
     const command = `${this.container} rmi ${this.mergeFlags(flags)} ${images}`;
 
-    return await this.execSync(command);
+    return this.execSync(command);
   }
   //#endregion
 }

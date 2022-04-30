@@ -19,3 +19,22 @@ export function factory(vm?: string, instance?: string): BaseBackend {
       throw new Error(`OS "${platform}" is not supported.`);
   }
 }
+
+// async function test() {
+//   const vm = factory();
+//   await vm.checkVM();
+
+//   const IMAGE = "hello-world";
+
+//   await vm.pullImage(IMAGE, (data) => {
+//     console.log(data);
+//   });
+
+//   await vm.run(IMAGE, { rm: true }, (data) => {
+//     console.log(data);
+//   });
+
+//   console.log(vm.removeImage(IMAGE));
+// }
+
+// test();

@@ -1,14 +1,12 @@
 import BaseBackend from "./base";
-import { ChildProcess } from "child_process";
 import { LimaListResult } from "@/types/lima";
 import { ProcessCallback } from "@/types";
+import { exec } from "child_process";
 import { isM1 } from "@/utils";
 
 export default class LimaBackend extends BaseBackend {
   async checkInstance(): Promise<boolean> {
-    const listChild = (await this.exec(
-      `${this.vm} list --json`
-    )) as ChildProcess;
+    const listChild = exec(`${this.vm} list --json`);
     if (!listChild || !listChild.stdout) return false;
 
     const list: LimaListResult[] = await new Promise((resolve, reject) => {
