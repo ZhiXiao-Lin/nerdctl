@@ -1,210 +1,87 @@
-import { Architecture, ProcessCallback } from "@/types";
 import { ImageResult, RemoveImageCommandFlags } from "@/types/images";
 import {
-  LogsCommandFlags,
   RemoveCommandFlags,
   RunCommandFlags,
   StopCommandFlags,
 } from "@/types/container";
-import { exec, execSync } from "child_process";
 
+import { APP_NAME } from "@/constants/app";
+import { ChildResultType } from "@/types";
+import { EventEmitter } from "events";
 import { GlobalFlags } from "@/types/global";
-import { LoginCommandFlags } from "@/types/registry";
+import { Log } from "@/utils/logging";
+import { join } from "path";
 import { paramCase } from "change-case";
-import { platform } from "@/utils";
 
-export default abstract class BaseBackend {
-  public debug: boolean = false;
-  protected readonly arch: Architecture;
-  protected readonly platform: string = platform;
-
-  protected readonly vm: string = "limactl";
+export default abstract class BaseBackend extends EventEmitter {
+  protected readonly log: Log;
+  protected readonly path: string;
   protected readonly instance: string = "default";
-  protected readonly runtime: string = "nerdctl";
 
-  constructor(
-    arch: Architecture,
-    vm: string = "limactl",
-    instance: string = "default"
-  ) {
-    this.arch = arch;
-    this.vm = vm;
-    this.instance = instance;
+  constructor(path: string) {
+    super();
+    this.path = path;
+    this.log = new Log(APP_NAME, join(this.resourcePath, "logs"));
   }
 
-  get container() {
-    if (this.platform !== "darwin")
-      return `${this.vm} -e XDG_RUNTIME_DIR=/run/user/$(id -u) ${this.runtime}`;
-    return `${this.vm} shell ${this.instance} ${this.runtime}`;
+  protected get resourcePath() {
+    return join(this.path, "resources");
   }
 
   //#region commons
-  protected async fork(
-    command: string,
-    callback?: ProcessCallback
-  ): Promise<boolean> {
-    const child = exec(command);
-
-    return await new Promise((resolve) => {
-      child?.stdout?.on("data", (data) => {
-        callback && callback(data);
-      });
-      child?.stdout?.on("close", () => {
-        resolve(true);
-      });
-      child?.stderr?.on("data", (data) => {
-        callback && callback(data);
-      });
-      child?.stderr?.on("close", () => {
-        resolve(false);
-      });
-    });
-  }
-
-  protected execSync(command: string): string {
-    return execSync(command).toString();
-  }
-
-  protected which(command: string) {
-    return this.execSync(`which ${command}`);
-  }
-
-  protected mergeFlags(flags?: GlobalFlags): string {
+  protected mergeFlags(flags?: GlobalFlags): string[] {
     const flagParams: string[] = [];
     if (flags) {
       for (const [key, value] of Object.entries(flags)) {
         const flag = `--${paramCase(key)}`;
         if (Array.isArray(value)) {
           value.forEach((val) => {
-            flagParams.push(`${flag} ${val}`);
+            flagParams.push(flag);
+            flagParams.push(val);
           });
         }
         if (typeof value === "boolean") {
           flagParams.push(flag);
         }
         if (typeof value === "string") {
-          flagParams.push(`${flag} ${value}`);
+          flagParams.push(flag);
+          flagParams.push(value);
         }
       }
     }
 
-    const params = flagParams.join(" ");
-
-    if (flags?.debug) {
-      console.log("flags:", params);
-    }
-
-    return params;
-  }
-  //#endregion
-
-  //#region VMs
-  async checkVM(): Promise<boolean> {
-    return !!this.which(this.vm);
-  }
-  async checkInstance(): Promise<boolean> {
-    return true;
-  }
-  async initVM(callback?: ProcessCallback): Promise<boolean> {
-    return true;
-  }
-  async initInstance(callback?: ProcessCallback): Promise<boolean> {
-    return true;
-  }
-  //#endregion
-
-  //#region registry
-  login(flags?: LoginCommandFlags, server?: string): string {
-    const command = `${this.container} login ${this.mergeFlags(
-      flags
-    )} ${server}`;
-
-    return this.execSync(command);
-  }
-
-  logout(server?: string): string {
-    const command = `${this.container} logout ${server}`;
-
-    return this.execSync(command);
+    return flagParams;
   }
   //#endregion
 
   //#region containers
-  async run(
+  abstract run(
     image: string,
-    flags?: RunCommandFlags,
-    callback?: ProcessCallback
-  ): Promise<boolean> {
-    const command = `${this.container} run ${this.mergeFlags(flags)} ${image}`;
+    flags?: RunCommandFlags
+  ): Promise<ChildResultType>;
 
-    return await this.fork(command, callback);
-  }
+  abstract stop(
+    container: string | string[],
+    flags?: StopCommandFlags
+  ): Promise<ChildResultType>;
 
-  stop(container: string | string[], flags?: StopCommandFlags): string {
-    const containers = Array.isArray(container)
-      ? container.join(" ")
-      : container;
-    const command = `${this.container} stop ${this.mergeFlags(
-      flags
-    )} ${containers}`;
-
-    return this.execSync(command);
-  }
-
-  remove(container: string | string[], flags?: RemoveCommandFlags): string {
-    const containers = Array.isArray(container)
-      ? container.join(" ")
-      : container;
-    const command = `${this.container} rm ${this.mergeFlags(
-      flags
-    )} ${containers}`;
-
-    return this.execSync(command);
-  }
-
-  async logs(container: string, flags?: LogsCommandFlags): Promise<boolean> {
-    const command = `${this.container} logs ${this.mergeFlags(
-      flags
-    )} ${container}`;
-
-    return await this.fork(command);
-  }
+  abstract remove(
+    container: string | string[],
+    flags?: RemoveCommandFlags
+  ): Promise<ChildResultType>;
   //#endregion
 
   //#region images
-  async pullImage(image: string, callback?: ProcessCallback): Promise<boolean> {
-    const command = `${this.container} pull ${image}`;
-
-    return await this.fork(command, callback);
-  }
-
-  async getImages(): Promise<ImageResult[]> {
-    const child = exec(`${this.container} images --format "{{json .}}"`);
-
-    return new Promise((resolve, reject) => {
-      if (!!child.exitCode) reject(null);
-
-      const images: ImageResult[] = [];
-
-      child.stdout!.on("data", (data) => {
-        if (!data) return;
-        images.push(JSON.parse(data));
-      });
-
-      child.stdout!.on("close", () => {
-        resolve(images);
-      });
-    });
-  }
-
-  removeImage(
+  abstract pullImage(image: string): Promise<ChildResultType>;
+  abstract getImages(): Promise<ImageResult[]>;
+  abstract removeImage(
     image: string | string[],
     flags?: RemoveImageCommandFlags
-  ): string {
-    const images = Array.isArray(image) ? image.join(" ") : image;
-    const command = `${this.container} rmi ${this.mergeFlags(flags)} ${images}`;
+  ): Promise<ChildResultType>;
+  //#endregion
 
-    return this.execSync(command);
-  }
+  //#region VMs
+  abstract checkVM(): Promise<boolean>;
+  abstract initVM(): Promise<boolean>;
   //#endregion
 }

@@ -1,12 +1,47 @@
-import { Architecture } from "@/types";
+import { ImageResult, RemoveImageCommandFlags } from "@/types/images";
+import {
+  RemoveCommandFlags,
+  RunCommandFlags,
+  StopCommandFlags,
+} from "@/types/container";
+
 import BaseBackend from "./base";
+import { ChildResultType } from "@/types";
 
 export default class WslBackend extends BaseBackend {
-  constructor(
-    protected readonly arch: Architecture,
-    protected readonly vm: string = "wsl",
-    protected readonly instance: string = "Ubuntu-20.04"
-  ) {
-    super(arch, vm, instance);
+  run(image: string, flags?: RunCommandFlags): Promise<ChildResultType> {
+    throw new Error("Method not implemented.");
+  }
+  stop(
+    container: string | string[],
+    flags?: StopCommandFlags
+  ): Promise<ChildResultType> {
+    throw new Error("Method not implemented.");
+  }
+  remove(
+    container: string | string[],
+    flags?: RemoveCommandFlags
+  ): Promise<ChildResultType> {
+    throw new Error("Method not implemented.");
+  }
+  pullImage(image: string): Promise<ChildResultType> {
+    throw new Error("Method not implemented.");
+  }
+  getImages(): Promise<ImageResult[]> {
+    throw new Error("Method not implemented.");
+  }
+  removeImage(
+    image: string | string[],
+    flags?: RemoveImageCommandFlags
+  ): Promise<ChildResultType> {
+    throw new Error("Method not implemented.");
+  }
+
+  async checkVM(): Promise<boolean> {
+    return true;
+  }
+
+  async initVM(): Promise<boolean> {
+    return true;
   }
 }

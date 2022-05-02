@@ -1,40 +1,49 @@
-import { isWindows, platform } from "./utils";
+import * as events from "@/constants/events";
 
 import BaseBackend from "@/vms/base";
 import LimaBackend from "@/vms/lima";
 import WslBackend from "@/vms/wsl";
-import os from "os";
+import { platform } from "@/utils";
 
-export function factory(vm?: string, instance?: string): BaseBackend {
-  const arch = os.arch() === "arm64" ? "aarch64" : "x86_64";
-  instance = instance ?? isWindows ? "Ubuntu-20.04" : "default";
+export * as events from "@/constants/events";
+
+export function factory(path: string = process.cwd()): BaseBackend {
   switch (platform) {
     case "linux":
-      return new LimaBackend(arch, vm, instance);
+      return new LimaBackend(path);
     case "darwin":
-      return new LimaBackend(arch, vm, instance);
+      return new LimaBackend(path);
     case "win32":
-      return new WslBackend(arch, vm, instance);
+      return new WslBackend(path);
     default:
       throw new Error(`OS "${platform}" is not supported.`);
   }
 }
 
-// async function test() {
-//   const vm = factory();
-//   await vm.checkVM();
+if (process.env.NODE_ENV === "development") {
+  async function test() {
+    const IMAGE = "hello-world";
 
-//   const IMAGE = "hello-world";
+    const vm = factory();
+    if (!(await vm.checkVM())) {
+      await vm.initVM();
+    }
 
-//   await vm.pullImage(IMAGE, (data) => {
-//     console.log(data);
-//   });
+    vm.on(events.IMAGE_PULL_START, () => {});
+    vm.on(events.IMAGE_PULL_OUTPUT, (data) => {
+      console.log(data);
+    });
+    vm.on(events.IMAGE_PULL_END, (data) => {
+      console.log(data);
+    });
 
-//   await vm.run(IMAGE, { rm: true }, (data) => {
-//     console.log(data);
-//   });
+    await vm.pullImage(IMAGE);
 
-//   console.log(vm.removeImage(IMAGE));
-// }
+    const images = await vm.getImages();
+    console.log(images);
 
-// test();
+    await vm.run(IMAGE, { rm: true });
+  }
+
+  test();
+}

@@ -1,6 +1,6 @@
 {
   "name": "nerdctl",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "description": "Node wrapper for nerdctl",
@@ -24,17 +24,13 @@
   },
   "dependencies": {
     "change-case": "^4.1.2",
-    "lodash": "^4.17.21",
-    "node-fetch": "2",
-    "ts-node-dev": "^1.1.8",
-    "yaml": "^2.0.0"
+    "node-fetch": "2.6.6"
   },
   "devDependencies": {
     "@tsconfig/node14": "^1.0.1",
     "@types/jest": "^27.4.1",
-    "@types/lodash": "^4.14.181",
     "@types/node": "^17.0.23",
-    "@types/node-fetch": "^2.6.1",
+    "@types/node-fetch": "2.x",
     "cross-env": "^7.0.3",
     "cz-conventional-changelog": "3.3.0",
     "dotenv": "^16.0.0",
@@ -42,6 +38,7 @@
     "jest": "^27.5.1",
     "rimraf": "^3.0.2",
     "ts-jest": "^27.1.4",
+    "ts-node-dev": "^1.1.8",
     "tsc-alias": "^1.6.5",
     "tsconfig-paths": "^3.14.1",
     "typedoc": "^0.22.14",
