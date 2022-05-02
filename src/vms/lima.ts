@@ -113,6 +113,9 @@ export default class LimaBackend extends BaseBackend {
         if ("pull" === command) {
           this.emit(events.IMAGE_PULL_OUTPUT, dataString);
         }
+        if ("run" === command) {
+          this.emit(events.CONTAINER_RUN_OUTPUT, dataString);
+        }
       });
       child.stderr?.on("data", (data: Buffer) => {
         let dataString = data.toString();
@@ -120,6 +123,9 @@ export default class LimaBackend extends BaseBackend {
 
         if ("pull" === command) {
           this.emit(events.IMAGE_PULL_OUTPUT, dataString);
+        }
+        if ("run" === command) {
+          this.emit(events.CONTAINER_RUN_OUTPUT, dataString);
         }
       });
       child.on("exit", (code, signal) => {
@@ -242,6 +248,11 @@ export default class LimaBackend extends BaseBackend {
     const limaDir = path.join(resourcesDir, "lima");
     const tarPath = path.join(resourcesDir, `lima-${LIMA_VERSION}.tgz`);
 
+    this.emit(
+      events.VM_INIT_OUTPUT,
+      `Downloading virtual machine from: ${url}`
+    );
+
     await download(url, tarPath);
     await fs.promises.mkdir(limaDir, { recursive: true });
 
@@ -249,6 +260,8 @@ export default class LimaBackend extends BaseBackend {
       cwd: limaDir,
       stdio: "inherit",
     });
+
+    this.emit(events.VM_INIT_OUTPUT, "Extracting virtual machine files");
 
     await new Promise((resolve, reject) => {
       child.on("exit", (code, signal) => {
@@ -259,6 +272,8 @@ export default class LimaBackend extends BaseBackend {
         }
       });
     });
+
+    this.emit(events.VM_INIT_OUTPUT, "Starting virtual machine");
 
     await this.lima("start", "--tty=false", this.instance);
 

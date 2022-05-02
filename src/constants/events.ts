@@ -5,3 +5,5 @@ export const VM_INIT_END = Symbol("VM_INIT_END");
 export const IMAGE_PULL_START = Symbol("IMAGE_PULL_START");
 export const IMAGE_PULL_OUTPUT = Symbol("IMAGE_PULL_OUTPUT");
 export const IMAGE_PULL_END = Symbol("IMAGE_PULL_END");
+
+export const CONTAINER_RUN_OUTPUT = Symbol("CONTAINER_RUN_OUTPUT");

@@ -28,6 +28,10 @@ vm.on(events.IMAGE_PULL_END, (data) => {
   console.log(data);
 });
 
+vm.on(events.CONTAINER_RUN_OUTPUT, (data) => {
+  console.log(data);
+});
+
 await vm.pullImage(IMAGE);
 
 const images = await vm.getImages();
