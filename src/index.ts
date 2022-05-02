@@ -1,5 +1,3 @@
-import * as events from "@/constants/events";
-
 import BaseBackend from "@/vms/base";
 import LimaBackend from "@/vms/lima";
 import WslBackend from "@/vms/wsl";
@@ -18,32 +16,4 @@ export function factory(path: string = process.cwd()): BaseBackend {
     default:
       throw new Error(`OS "${platform}" is not supported.`);
   }
-}
-
-if (process.env.NODE_ENV === "development") {
-  async function test() {
-    const IMAGE = "hello-world";
-
-    const vm = factory();
-    if (!(await vm.checkVM())) {
-      await vm.initVM();
-    }
-
-    vm.on(events.IMAGE_PULL_START, () => {});
-    vm.on(events.IMAGE_PULL_OUTPUT, (data) => {
-      console.log(data);
-    });
-    vm.on(events.IMAGE_PULL_END, (data) => {
-      console.log(data);
-    });
-
-    await vm.pullImage(IMAGE);
-
-    const images = await vm.getImages();
-    console.log(images);
-
-    await vm.run(IMAGE, { rm: true });
-  }
-
-  test();
 }
