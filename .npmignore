@@ -6,3 +6,4 @@ src/
 /docs/
 .husky/
 .env
+/resources/
