@@ -17,6 +17,7 @@ export default abstract class BaseBackend extends EventEmitter {
   protected readonly log: Log;
   protected readonly path: string;
   protected readonly instance: string = "default";
+  protected readonly container: string = "nerdctl";
 
   constructor(path: string) {
     super();
