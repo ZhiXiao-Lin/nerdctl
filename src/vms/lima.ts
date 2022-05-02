@@ -279,7 +279,7 @@ export default class LimaBackend extends BaseBackend {
   async checkVM(): Promise<boolean> {
     try {
       await fs.promises.access(this.limactl, fs.constants.X_OK);
-      return (await this.status)!.name === "Running";
+      return (await this.status)!.status === "Running";
     } catch (ex: any) {
       return false;
     }
@@ -289,7 +289,7 @@ export default class LimaBackend extends BaseBackend {
     this.emit(events.VM_INIT_START);
 
     if (!!(await this.status)) {
-      await this.lima("start", "--tty=false", this.instance);
+      await this.lima("start", this.instance);
       return true;
     }
 
