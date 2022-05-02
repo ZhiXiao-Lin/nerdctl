@@ -288,108 +288,113 @@ export default class LimaBackend extends BaseBackend {
   async initVM(): Promise<boolean> {
     this.emit(events.VM_INIT_START);
 
-    if (!!(await this.status)) {
-      await this.lima("start", this.instance);
-      return true;
+    try {
+      if (!!(await this.status)) {
+        await this.lima("start", this.instance);
+      } else {
+        const platformName = platform === "darwin" ? "macos" : "linux";
+        const archName = isM1 ? "-aarch64" : "";
+
+        const url = `${LIMA_REPO}/${LIMA_VERSION}/lima-and-qemu.${platformName}${archName}.tar.gz`;
+        const resourcesDir = path.join(this.resourcePath, platform);
+        const limaDir = path.join(resourcesDir, "lima");
+        const tarPath = path.join(resourcesDir, `lima-${LIMA_VERSION}.tgz`);
+
+        this.emit(events.VM_INIT_OUTPUT, `Downloading virtual machine`);
+
+        await download(url, tarPath);
+        await fs.promises.mkdir(limaDir, { recursive: true });
+
+        this.emit(events.VM_INIT_OUTPUT, "Extracting virtual machine files");
+
+        const child = ChildProcess.spawn("/usr/bin/tar", ["-xf", tarPath], {
+          cwd: limaDir,
+          stdio: "inherit",
+        });
+
+        await new Promise((resolve, reject) => {
+          child.on("exit", (code, signal) => {
+            if (code === 0) {
+              resolve(true);
+            } else {
+              reject(new Error(`Lima extract failed with ${code || signal}`));
+            }
+          });
+        });
+
+        const config: LimaConfiguration = merge({
+          arch: null,
+          images: [
+            {
+              location:
+                "https://cloud-images.ubuntu.com/releases/22.04/release-20220420/ubuntu-22.04-server-cloudimg-amd64.img",
+              arch: "x86_64",
+              digest:
+                "sha256:de5e632e17b8965f2baf4ea6d2b824788e154d9a65df4fd419ec4019898e15cd",
+            },
+            {
+              location:
+                "https://cloud-images.ubuntu.com/releases/22.04/release-20220420/ubuntu-22.04-server-cloudimg-arm64.img",
+              arch: "aarch64",
+              digest:
+                "sha256:66224c7fed99ff5a5539eda406c87bbfefe8af6ff6b47d92df3187832b5b5d4f",
+            },
+            {
+              location:
+                "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img",
+              arch: "x86_64",
+            },
+            {
+              location:
+                "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img",
+              arch: "aarch64",
+            },
+          ],
+          cpus: 2,
+          memory: 2 * 1024 * 1024 * 1024,
+          mounts: [
+            { location: "~", writable: true },
+            { location: `/tmp/${APP_NAME}`, writable: true },
+          ],
+          ssh: { localPort: await this.sshPort },
+          caCerts: { removeDefaults: null, files: null, certs: null },
+          containerd: { system: null, user: null },
+          cpuType: { aarch64: null, x86_64: null },
+          firmware: { legacyBIOS: null },
+          video: { display: null },
+          networks: null,
+          propagateProxyEnv: null,
+          hostResolver: {
+            enabled: null,
+            ipv6: null,
+            hosts: {
+              [`host.${APP_NAME}.internal`]: "host.lima.internal",
+            },
+          },
+        });
+
+        const CONFIG_PATH = path.join(
+          this.limaHome,
+          "_config",
+          `${this.instance}.yaml`
+        );
+
+        await fs.promises.mkdir(path.dirname(CONFIG_PATH), {
+          recursive: true,
+        });
+        await fs.promises.writeFile(
+          CONFIG_PATH,
+          yaml.stringify(config),
+          "utf-8"
+        );
+
+        this.emit(events.VM_INIT_OUTPUT, "Starting virtual machine");
+
+        await this.lima("start", "--tty=false", CONFIG_PATH);
+      }
+    } finally {
+      this.emit(events.VM_INIT_END);
     }
-
-    const platformName = platform === "darwin" ? "macos" : "linux";
-    const archName = isM1 ? "-aarch64" : "";
-
-    const url = `${LIMA_REPO}/${LIMA_VERSION}/lima-and-qemu.${platformName}${archName}.tar.gz`;
-    const resourcesDir = path.join(this.resourcePath, platform);
-    const limaDir = path.join(resourcesDir, "lima");
-    const tarPath = path.join(resourcesDir, `lima-${LIMA_VERSION}.tgz`);
-
-    this.emit(events.VM_INIT_OUTPUT, `Downloading virtual machine`);
-
-    await download(url, tarPath);
-    await fs.promises.mkdir(limaDir, { recursive: true });
-
-    this.emit(events.VM_INIT_OUTPUT, "Extracting virtual machine files");
-
-    const child = ChildProcess.spawn("/usr/bin/tar", ["-xf", tarPath], {
-      cwd: limaDir,
-      stdio: "inherit",
-    });
-
-    await new Promise((resolve, reject) => {
-      child.on("exit", (code, signal) => {
-        if (code === 0) {
-          resolve(true);
-        } else {
-          reject(new Error(`Lima extract failed with ${code || signal}`));
-        }
-      });
-    });
-
-    const config: LimaConfiguration = merge({
-      arch: null,
-      images: [
-        {
-          location:
-            "https://cloud-images.ubuntu.com/releases/22.04/release-20220420/ubuntu-22.04-server-cloudimg-amd64.img",
-          arch: "x86_64",
-          digest:
-            "sha256:de5e632e17b8965f2baf4ea6d2b824788e154d9a65df4fd419ec4019898e15cd",
-        },
-        {
-          location:
-            "https://cloud-images.ubuntu.com/releases/22.04/release-20220420/ubuntu-22.04-server-cloudimg-arm64.img",
-          arch: "aarch64",
-          digest:
-            "sha256:66224c7fed99ff5a5539eda406c87bbfefe8af6ff6b47d92df3187832b5b5d4f",
-        },
-        {
-          location:
-            "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img",
-          arch: "x86_64",
-        },
-        {
-          location:
-            "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img",
-          arch: "aarch64",
-        },
-      ],
-      cpus: 2,
-      memory: 2 * 1024 * 1024 * 1024,
-      mounts: [
-        { location: "~", writable: true },
-        { location: `/tmp/${APP_NAME}`, writable: true },
-      ],
-      ssh: { localPort: await this.sshPort },
-      caCerts: { removeDefaults: null, files: null, certs: null },
-      containerd: { system: null, user: null },
-      cpuType: { aarch64: null, x86_64: null },
-      firmware: { legacyBIOS: null },
-      video: { display: null },
-      networks: null,
-      propagateProxyEnv: null,
-      hostResolver: {
-        enabled: null,
-        ipv6: null,
-        hosts: {
-          [`host.${APP_NAME}.internal`]: "host.lima.internal",
-        },
-      },
-    });
-
-    const CONFIG_PATH = path.join(
-      this.limaHome,
-      "_config",
-      `${this.instance}.yaml`
-    );
-
-    await fs.promises.mkdir(path.dirname(CONFIG_PATH), {
-      recursive: true,
-    });
-    await fs.promises.writeFile(CONFIG_PATH, yaml.stringify(config), "utf-8");
-
-    this.emit(events.VM_INIT_OUTPUT, "Starting virtual machine");
-
-    await this.lima("start", "--tty=false", CONFIG_PATH);
-
-    this.emit(events.VM_INIT_END);
 
     return true;
   }
