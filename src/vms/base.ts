@@ -1,3 +1,5 @@
+import * as events from "@/constants/events";
+
 import { ImageResult, RemoveImageCommandFlags } from "@/types/images";
 import {
   RemoveCommandFlags,
@@ -23,6 +25,9 @@ export default abstract class BaseBackend extends EventEmitter {
     super();
     this.path = path;
     this.log = new Log(APP_NAME, join(this.resourcePath, "logs"));
+    this.log.on("log", (message: string, type: string) => {
+      this.emit(events.VM_INIT_OUTPUT, message, type);
+    });
   }
 
   protected get resourcePath() {

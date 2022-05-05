@@ -19,6 +19,7 @@
  */
 
 import { Console } from "console";
+import { EventEmitter } from "events";
 import fs from "fs";
 import path from "path";
 import stream from "stream";
@@ -33,8 +34,9 @@ export function setLogLevel(level: logLevel): void {
   LOG_LEVEL = level;
 }
 
-export class Log {
+export class Log extends EventEmitter {
   constructor(topic: string, directory: string) {
+    super();
     this.path = path.join(directory, `${topic}.log`);
 
     fs.mkdirSync(directory, { recursive: true });
@@ -107,6 +109,7 @@ export class Log {
     message: any,
     optionalParameters: any[]
   ) {
+    this.emit("log", message, method);
     this.console[method](`%s: ${message}`, new Date(), ...optionalParameters);
   }
 
