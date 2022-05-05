@@ -17,10 +17,16 @@ const IMAGE_NAME = "hello-world";
 const CONTAINER_NAME = "hello";
 
 const vm = factory();
-if (!(await vm.checkVM())) {
-  await vm.initVM();
-}
 
+vm.on(events.VM_INIT_START, () => {
+  console.log("VM_INIT_START");
+});
+vm.on(events.VM_INIT_OUTPUT, (data) => {
+  console.log(data);
+});
+vm.on(events.VM_INIT_END, () => {
+  console.log("VM_INIT_END");
+});
 vm.on(events.IMAGE_PULL_START, () => {});
 vm.on(events.IMAGE_PULL_OUTPUT, (data) => {
   console.log(data);
@@ -31,6 +37,10 @@ vm.on(events.IMAGE_PULL_END, (data) => {
 vm.on(events.CONTAINER_RUN_OUTPUT, (data) => {
   console.log(data);
 });
+
+if (!(await vm.checkVM())) {
+  await vm.initVM();
+}
 
 await vm.pullImage(IMAGE_NAME);
 

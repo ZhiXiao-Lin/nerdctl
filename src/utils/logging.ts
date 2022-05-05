@@ -45,6 +45,7 @@ export class Log extends EventEmitter {
     this.fdPromise = new Promise((resolve) => {
       this.stream.on("open", resolve);
     });
+
     this.console =
       process.env.NODE_ENV === "test"
         ? globalThis.console
@@ -109,8 +110,11 @@ export class Log extends EventEmitter {
     message: any,
     optionalParameters: any[]
   ) {
-    this.emit("log", message, method);
-    this.console[method](`%s: ${message}`, new Date(), ...optionalParameters);
+    this.console[method](
+      `%s: ----> ${message}`,
+      new Date(),
+      ...optionalParameters
+    );
   }
 
   /**

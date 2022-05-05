@@ -104,11 +104,56 @@ export default class LimaBackend extends BaseBackend {
     })();
   }
 
-  protected async lima(...args: string[]): Promise<void> {
+  protected async lima(
+    command: string,
+    ...args: string[]
+  ): Promise<ChildResultType> {
     try {
-      await childProcess.spawnFile(this.limactl, args, {
+      const child = await childProcess.spawn(this.limactl, [command, ...args], {
         env: this.limaEnv,
-        stdio: this.log,
+      });
+
+      const result = { code: 0, stdout: "", stderr: "" };
+
+      return await new Promise((resolve, reject) => {
+        child.stdout?.on("data", (data: Buffer) => {
+          const dataString = data.toString();
+          result.stdout += dataString;
+          this.emit(events.VM_INIT_OUTPUT, dataString);
+        });
+        child.stderr?.on("data", (data: Buffer) => {
+          let dataString = data.toString();
+          result.stderr += dataString;
+          this.emit(events.VM_INIT_OUTPUT, dataString);
+        });
+        child.on("exit", (code, signal) => {
+          if (result.stderr) {
+          }
+          if (code === 0) {
+            resolve({ ...result, code });
+          } else if (signal) {
+            reject(
+              Object.create(result, {
+                code: { value: -1 },
+                signal: { value: signal },
+                [childProcess.ErrorCommand]: {
+                  enumerable: false,
+                  value: child.spawnargs,
+                },
+              })
+            );
+          } else {
+            reject(
+              Object.create(result, {
+                code: { value: code },
+                [childProcess.ErrorCommand]: {
+                  enumerable: false,
+                  value: child.spawnargs,
+                },
+              })
+            );
+          }
+        });
       });
     } catch (ex) {
       console.error(`+ limactl ${args.join(" ")}`);
