@@ -111,9 +111,8 @@ export default class LimaBackend extends BaseBackend {
       } else {
         await this.downloadVM();
 
-        const resourcesDir = path.join(this.resourcePath, platform);
-        const tarPath = path.join(resourcesDir, `lima-${LIMA_VERSION}.tgz`);
-        const limaDir = path.join(resourcesDir, "lima");
+        const tarPath = path.join(this.resourcePath, `vm-${LIMA_VERSION}.tgz`);
+        const limaDir = path.join(this.resourcePath, "vm");
 
         await fs.promises.mkdir(limaDir, { recursive: true });
 
@@ -191,9 +190,7 @@ export default class LimaBackend extends BaseBackend {
     const archName = isM1 ? "-aarch64" : "";
 
     const url = `${LIMA_REPO}/${LIMA_VERSION}/lima-and-qemu.${platformName}${archName}.tar.gz`;
-    const resourcesDir = path.join(this.resourcePath, platform);
-
-    const tarPath = path.join(resourcesDir, `lima-${LIMA_VERSION}.tgz`);
+    const tarPath = path.join(this.resourcePath, `vm-${LIMA_VERSION}.tgz`);
 
     this.emit(events.VM_INIT_OUTPUT, `Downloading virtual machine`);
 
@@ -206,8 +203,7 @@ export default class LimaBackend extends BaseBackend {
     const arch = getVMArch();
     const archName = arch === "x86_64" ? "amd64" : "arm64";
 
-    const resourcesDir = path.join(this.resourcePath, platform);
-    const location = path.join(resourcesDir, "vm.img");
+    const location = path.join(this.resourcePath, "vm.img");
 
     this.emit(events.VM_INIT_OUTPUT, `Downloading virtual machine image`);
 
@@ -224,7 +220,7 @@ export default class LimaBackend extends BaseBackend {
   }
 
   protected get limactl() {
-    return path.join(this.resourcePath, platform, "lima", "bin", "limactl");
+    return path.join(this.resourcePath, "vm", "bin", "limactl");
   }
 
   protected get limaHome() {
@@ -232,7 +228,7 @@ export default class LimaBackend extends BaseBackend {
   }
 
   protected get limaEnv() {
-    const binDir = path.join(this.resourcePath, platform, "lima", "bin");
+    const binDir = path.join(this.resourcePath, "vm", "bin");
     const pathList = (process.env.PATH || "").split(path.delimiter);
     const newPath = [binDir].concat(...pathList).filter((x) => x);
     return {
