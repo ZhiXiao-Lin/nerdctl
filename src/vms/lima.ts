@@ -111,6 +111,29 @@ export default class LimaBackend extends BaseBackend {
       } else {
         await this.downloadVM();
 
+        const resourcesDir = path.join(this.resourcePath, platform);
+        const tarPath = path.join(resourcesDir, `lima-${LIMA_VERSION}.tgz`);
+        const limaDir = path.join(resourcesDir, "lima");
+
+        await fs.promises.mkdir(limaDir, { recursive: true });
+
+        this.emit(events.VM_INIT_OUTPUT, "Extracting virtual machine files");
+
+        const child = ChildProcess.spawn("/usr/bin/tar", ["-xf", tarPath], {
+          cwd: limaDir,
+          stdio: "inherit",
+        });
+
+        await new Promise((resolve, reject) => {
+          child.on("exit", (code, signal) => {
+            if (code === 0) {
+              resolve(true);
+            } else {
+              reject(new Error(`Lima extract failed with ${code || signal}`));
+            }
+          });
+        });
+
         const config: LimaConfiguration = merge({
           arch: null,
           images: await this.downloadVMImages(),
@@ -169,30 +192,14 @@ export default class LimaBackend extends BaseBackend {
 
     const url = `${LIMA_REPO}/${LIMA_VERSION}/lima-and-qemu.${platformName}${archName}.tar.gz`;
     const resourcesDir = path.join(this.resourcePath, platform);
-    const limaDir = path.join(resourcesDir, "lima");
+
     const tarPath = path.join(resourcesDir, `lima-${LIMA_VERSION}.tgz`);
 
     this.emit(events.VM_INIT_OUTPUT, `Downloading virtual machine`);
 
     await download(url, tarPath);
-    await fs.promises.mkdir(limaDir, { recursive: true });
 
-    this.emit(events.VM_INIT_OUTPUT, "Extracting virtual machine files");
-
-    const child = ChildProcess.spawn("/usr/bin/tar", ["-xf", tarPath], {
-      cwd: limaDir,
-      stdio: "inherit",
-    });
-
-    return await new Promise((resolve, reject) => {
-      child.on("exit", (code, signal) => {
-        if (code === 0) {
-          resolve(true);
-        } else {
-          reject(new Error(`Lima extract failed with ${code || signal}`));
-        }
-      });
-    });
+    return true;
   }
 
   async downloadVMImages(): Promise<VMImage[]> {

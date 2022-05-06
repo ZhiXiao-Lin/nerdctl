@@ -16,7 +16,7 @@ import { paramCase } from "change-case";
 export default abstract class BaseBackend extends EventEmitter {
   protected readonly log: Log;
   protected readonly path: string;
-  protected readonly instance: string = "default";
+  protected readonly instance: string = "0";
   protected readonly container: string = "nerdctl";
 
   constructor(path: string) {
@@ -26,7 +26,7 @@ export default abstract class BaseBackend extends EventEmitter {
   }
 
   protected get resourcePath() {
-    return join(this.path, "resources");
+    return join(this.path, "res");
   }
 
   //#region commons
