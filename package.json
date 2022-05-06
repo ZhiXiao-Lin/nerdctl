@@ -1,6 +1,6 @@
 {
   "name": "nerdctl",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "description": "Node wrapper for nerdctl",
@@ -16,8 +16,8 @@
   "scripts": {
     "prebuild": "rimraf ./dist",
     "build": "tsc && tsc-alias",
-    "dev": "cross-env NODE_ENV=development ts-node-dev --respawn --transpile-only -r tsconfig-paths/register ./src/index.ts",
-    "start": "cross-env NODE_ENV=development ts-node --transpile-only -r tsconfig-paths/register ./src/index.ts",
+    "dev": "cross-env NODE_ENV=local ts-node-dev --respawn --transpile-only -r tsconfig-paths/register ./src/index.ts",
+    "start": "cross-env NODE_ENV=local ts-node --transpile-only -r tsconfig-paths/register ./src/index.ts",
     "prepublish": "yarn build",
     "docs": "typedoc src/index.ts",
     "test": "jest"

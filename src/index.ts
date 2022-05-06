@@ -20,7 +20,7 @@ export function factory(path: string = process.cwd()): BaseBackend {
   }
 }
 
-if (process.env.NODE_ENV === "development") {
+if (process.env.NODE_ENV === "local") {
   async function test() {
     const IMAGE_NAME = "hello-world";
     const CONTAINER_NAME = "hello";
