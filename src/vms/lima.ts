@@ -2,6 +2,7 @@ import * as childProcess from "@/utils/childProcess";
 import * as events from "@/constants/events";
 
 import ChildProcess, { spawn } from "child_process";
+import { ChildResultType, VMImage } from "@/types";
 import { ImageResult, RemoveImageCommandFlags } from "@/types/images";
 import { LIMA_REPO, LIMA_VERSION } from "@/constants/lima";
 import { LimaConfiguration, LimaListResult } from "@/types/lima";
@@ -14,7 +15,6 @@ import { getVMArch, isM1, platform } from "@/utils";
 
 import { APP_NAME } from "@/constants/app";
 import BaseBackend from "./base";
-import { ChildResultType } from "@/types";
 import { download } from "@/utils/download";
 import fs from "fs";
 import merge from "lodash/merge";
@@ -109,11 +109,11 @@ export default class LimaBackend extends BaseBackend {
       if (!!(await this.status)) {
         await this.lima("start", this.instance);
       } else {
-        await this.downloadLima();
+        await this.downloadVM();
 
         const config: LimaConfiguration = merge({
           arch: null,
-          images: await this.downloadLimaImages(),
+          images: await this.downloadVMImages(),
           cpus: 2,
           memory: 2 * 1024 * 1024 * 1024,
           mounts: [
@@ -163,7 +163,7 @@ export default class LimaBackend extends BaseBackend {
     return true;
   }
 
-  async downloadLima(): Promise<boolean> {
+  async downloadVM(): Promise<boolean> {
     const platformName = platform === "darwin" ? "macos" : "linux";
     const archName = isM1 ? "-aarch64" : "";
 
@@ -195,7 +195,7 @@ export default class LimaBackend extends BaseBackend {
     });
   }
 
-  async downloadLimaImages(): Promise<{ location: string; arch: string }[]> {
+  async downloadVMImages(): Promise<VMImage[]> {
     const arch = getVMArch();
     const archName = arch === "x86_64" ? "amd64" : "arm64";
 

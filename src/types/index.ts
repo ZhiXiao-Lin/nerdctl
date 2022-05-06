@@ -6,3 +6,8 @@ export interface ChildResultType {
   code: number;
   signal?: string;
 }
+
+export interface VMImage {
+  location: string;
+  arch: string;
+}

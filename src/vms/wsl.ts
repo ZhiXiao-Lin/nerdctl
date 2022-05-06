@@ -1,3 +1,4 @@
+import { ChildResultType, VMImage } from "@/types";
 import { ImageResult, RemoveImageCommandFlags } from "@/types/images";
 import {
   RemoveCommandFlags,
@@ -6,7 +7,6 @@ import {
 } from "@/types/container";
 
 import BaseBackend from "./base";
-import { ChildResultType } from "@/types";
 
 export default class WslBackend extends BaseBackend {
   run(image: string, flags?: RunCommandFlags): Promise<ChildResultType> {
@@ -43,5 +43,13 @@ export default class WslBackend extends BaseBackend {
 
   async initVM(): Promise<boolean> {
     return true;
+  }
+
+  async downloadVM(): Promise<boolean> {
+    return true;
+  }
+
+  async downloadVMImages(): Promise<VMImage[]> {
+    return [];
   }
 }

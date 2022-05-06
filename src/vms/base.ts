@@ -1,3 +1,4 @@
+import { ChildResultType, VMImage } from "@/types";
 import { ImageResult, RemoveImageCommandFlags } from "@/types/images";
 import {
   RemoveCommandFlags,
@@ -6,7 +7,6 @@ import {
 } from "@/types/container";
 
 import { APP_NAME } from "@/constants/app";
-import { ChildResultType } from "@/types";
 import { EventEmitter } from "events";
 import { GlobalFlags } from "@/types/global";
 import { Log } from "@/utils/logging";
@@ -84,5 +84,7 @@ export default abstract class BaseBackend extends EventEmitter {
   //#region VMs
   abstract checkVM(): Promise<boolean>;
   abstract initVM(): Promise<boolean>;
+  abstract downloadVM(): Promise<boolean>;
+  abstract downloadVMImages(): Promise<VMImage[]>;
   //#endregion
 }
