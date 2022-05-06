@@ -10,7 +10,7 @@ import {
   RunCommandFlags,
   StopCommandFlags,
 } from "@/types/container";
-import { isM1, platform } from "@/utils";
+import { getVMArch, isM1, platform } from "@/utils";
 
 import { APP_NAME } from "@/constants/app";
 import BaseBackend from "./base";
@@ -23,6 +23,199 @@ import path from "path";
 import yaml from "yaml";
 
 export default class LimaBackend extends BaseBackend {
+  async run(image: string, flags?: RunCommandFlags): Promise<ChildResultType> {
+    const args: string[] = [...this.mergeFlags(flags), image];
+
+    return await this.containerWithProcess("run", ...args);
+  }
+
+  async stop(
+    container: string | string[],
+    flags?: StopCommandFlags
+  ): Promise<ChildResultType> {
+    const args: string[] = Array.isArray(container)
+      ? [...container]
+      : [container];
+
+    return await this.containerWithProcess(
+      "stop",
+      ...this.mergeFlags(flags).concat(args)
+    );
+  }
+
+  async remove(
+    container: string | string[],
+    flags?: RemoveCommandFlags
+  ): Promise<ChildResultType> {
+    const args: string[] = Array.isArray(container)
+      ? [...container]
+      : [container];
+
+    return await this.containerWithProcess(
+      "rm",
+      ...this.mergeFlags(flags).concat(args)
+    );
+  }
+
+  async pullImage(image: string): Promise<ChildResultType> {
+    this.emit(events.IMAGE_PULL_START);
+
+    const result = await this.containerWithProcess("pull", image);
+
+    this.emit(events.IMAGE_PULL_END, result);
+
+    return result;
+  }
+
+  async getImages(): Promise<ImageResult[]> {
+    const text = await this.containerWithCapture(
+      "images",
+      "--format",
+      `"{{json .}}"`
+    );
+
+    const lines = text.split(/\r?\n/).filter((x) => x.trim());
+    const entries = lines.map(
+      (line) => JSON.parse(line.substring(1, line.length - 1)) as ImageResult
+    );
+
+    return entries;
+  }
+
+  async removeImage(
+    image: string | string[],
+    flags?: RemoveImageCommandFlags
+  ): Promise<ChildResultType> {
+    const args: string[] = Array.isArray(image) ? [...image] : [image];
+
+    return await this.containerWithProcess(
+      "rmi",
+      ...this.mergeFlags(flags).concat(args)
+    );
+  }
+
+  async checkVM(): Promise<boolean> {
+    try {
+      await fs.promises.access(this.limactl, fs.constants.X_OK);
+      return (await this.status)!.status === "Running";
+    } catch (ex: any) {
+      return false;
+    }
+  }
+
+  async initVM(): Promise<boolean> {
+    this.emit(events.VM_INIT_START);
+    try {
+      if (!!(await this.status)) {
+        await this.lima("start", this.instance);
+      } else {
+        await this.downloadLima();
+
+        const config: LimaConfiguration = merge({
+          arch: null,
+          images: await this.downloadLimaImages(),
+          cpus: 2,
+          memory: 2 * 1024 * 1024 * 1024,
+          mounts: [
+            { location: "~", writable: true },
+            { location: `/tmp/${APP_NAME}`, writable: true },
+          ],
+          ssh: { localPort: await this.sshPort },
+          caCerts: { removeDefaults: null, files: null, certs: null },
+          containerd: { system: null, user: null },
+          cpuType: { aarch64: null, x86_64: null },
+          firmware: { legacyBIOS: null },
+          video: { display: null },
+          networks: null,
+          propagateProxyEnv: null,
+          hostResolver: {
+            enabled: null,
+            ipv6: null,
+            hosts: {
+              [`host.${APP_NAME}.internal`]: "host.lima.internal",
+            },
+          },
+        });
+
+        const CONFIG_PATH = path.join(
+          this.limaHome,
+          "_config",
+          `${this.instance}.yaml`
+        );
+
+        await fs.promises.mkdir(path.dirname(CONFIG_PATH), {
+          recursive: true,
+        });
+        await fs.promises.writeFile(
+          CONFIG_PATH,
+          yaml.stringify(config),
+          "utf-8"
+        );
+
+        this.emit(events.VM_INIT_OUTPUT, "Starting virtual machine");
+
+        await this.lima("start", "--tty=false", CONFIG_PATH);
+      }
+    } finally {
+      this.emit(events.VM_INIT_END);
+    }
+
+    return true;
+  }
+
+  async downloadLima(): Promise<boolean> {
+    const platformName = platform === "darwin" ? "macos" : "linux";
+    const archName = isM1 ? "-aarch64" : "";
+
+    const url = `${LIMA_REPO}/${LIMA_VERSION}/lima-and-qemu.${platformName}${archName}.tar.gz`;
+    const resourcesDir = path.join(this.resourcePath, platform);
+    const limaDir = path.join(resourcesDir, "lima");
+    const tarPath = path.join(resourcesDir, `lima-${LIMA_VERSION}.tgz`);
+
+    this.emit(events.VM_INIT_OUTPUT, `Downloading virtual machine`);
+
+    await download(url, tarPath);
+    await fs.promises.mkdir(limaDir, { recursive: true });
+
+    this.emit(events.VM_INIT_OUTPUT, "Extracting virtual machine files");
+
+    const child = ChildProcess.spawn("/usr/bin/tar", ["-xf", tarPath], {
+      cwd: limaDir,
+      stdio: "inherit",
+    });
+
+    return await new Promise((resolve, reject) => {
+      child.on("exit", (code, signal) => {
+        if (code === 0) {
+          resolve(true);
+        } else {
+          reject(new Error(`Lima extract failed with ${code || signal}`));
+        }
+      });
+    });
+  }
+
+  async downloadLimaImages(): Promise<{ location: string; arch: string }[]> {
+    const arch = getVMArch();
+    const archName = arch === "x86_64" ? "amd64" : "arm64";
+
+    const resourcesDir = path.join(this.resourcePath, platform);
+    const location = path.join(resourcesDir, "vm.img");
+
+    this.emit(events.VM_INIT_OUTPUT, `Downloading virtual machine image`);
+
+    const url = `https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-${archName}.img`;
+
+    await download(url, location);
+
+    return [
+      {
+        location,
+        arch,
+      },
+    ];
+  }
+
   protected get limactl() {
     return path.join(this.resourcePath, platform, "lima", "bin", "limactl");
   }
@@ -248,199 +441,5 @@ export default class LimaBackend extends BaseBackend {
         }
       });
     });
-  }
-
-  async run(image: string, flags?: RunCommandFlags): Promise<ChildResultType> {
-    const args: string[] = [...this.mergeFlags(flags), image];
-
-    return await this.containerWithProcess("run", ...args);
-  }
-
-  async stop(
-    container: string | string[],
-    flags?: StopCommandFlags
-  ): Promise<ChildResultType> {
-    const args: string[] = Array.isArray(container)
-      ? [...container]
-      : [container];
-
-    return await this.containerWithProcess(
-      "stop",
-      ...this.mergeFlags(flags).concat(args)
-    );
-  }
-
-  async remove(
-    container: string | string[],
-    flags?: RemoveCommandFlags
-  ): Promise<ChildResultType> {
-    const args: string[] = Array.isArray(container)
-      ? [...container]
-      : [container];
-
-    return await this.containerWithProcess(
-      "rm",
-      ...this.mergeFlags(flags).concat(args)
-    );
-  }
-
-  async pullImage(image: string): Promise<ChildResultType> {
-    this.emit(events.IMAGE_PULL_START);
-
-    const result = await this.containerWithProcess("pull", image);
-
-    this.emit(events.IMAGE_PULL_END, result);
-
-    return result;
-  }
-
-  async getImages(): Promise<ImageResult[]> {
-    const text = await this.containerWithCapture(
-      "images",
-      "--format",
-      `"{{json .}}"`
-    );
-
-    const lines = text.split(/\r?\n/).filter((x) => x.trim());
-    const entries = lines.map(
-      (line) => JSON.parse(line.substring(1, line.length - 1)) as ImageResult
-    );
-
-    return entries;
-  }
-
-  async removeImage(
-    image: string | string[],
-    flags?: RemoveImageCommandFlags
-  ): Promise<ChildResultType> {
-    const args: string[] = Array.isArray(image) ? [...image] : [image];
-
-    return await this.containerWithProcess(
-      "rmi",
-      ...this.mergeFlags(flags).concat(args)
-    );
-  }
-
-  async checkVM(): Promise<boolean> {
-    try {
-      await fs.promises.access(this.limactl, fs.constants.X_OK);
-      return (await this.status)!.status === "Running";
-    } catch (ex: any) {
-      return false;
-    }
-  }
-
-  async initVM(): Promise<boolean> {
-    this.emit(events.VM_INIT_START);
-
-    try {
-      if (!!(await this.status)) {
-        await this.lima("start", this.instance);
-      } else {
-        const platformName = platform === "darwin" ? "macos" : "linux";
-        const archName = isM1 ? "-aarch64" : "";
-
-        const url = `${LIMA_REPO}/${LIMA_VERSION}/lima-and-qemu.${platformName}${archName}.tar.gz`;
-        const resourcesDir = path.join(this.resourcePath, platform);
-        const limaDir = path.join(resourcesDir, "lima");
-        const tarPath = path.join(resourcesDir, `lima-${LIMA_VERSION}.tgz`);
-
-        this.emit(events.VM_INIT_OUTPUT, `Downloading virtual machine`);
-
-        await download(url, tarPath);
-        await fs.promises.mkdir(limaDir, { recursive: true });
-
-        this.emit(events.VM_INIT_OUTPUT, "Extracting virtual machine files");
-
-        const child = ChildProcess.spawn("/usr/bin/tar", ["-xf", tarPath], {
-          cwd: limaDir,
-          stdio: "inherit",
-        });
-
-        await new Promise((resolve, reject) => {
-          child.on("exit", (code, signal) => {
-            if (code === 0) {
-              resolve(true);
-            } else {
-              reject(new Error(`Lima extract failed with ${code || signal}`));
-            }
-          });
-        });
-
-        const config: LimaConfiguration = merge({
-          arch: null,
-          images: [
-            {
-              location:
-                "https://cloud-images.ubuntu.com/releases/22.04/release-20220420/ubuntu-22.04-server-cloudimg-amd64.img",
-              arch: "x86_64",
-              digest:
-                "sha256:de5e632e17b8965f2baf4ea6d2b824788e154d9a65df4fd419ec4019898e15cd",
-            },
-            {
-              location:
-                "https://cloud-images.ubuntu.com/releases/22.04/release-20220420/ubuntu-22.04-server-cloudimg-arm64.img",
-              arch: "aarch64",
-              digest:
-                "sha256:66224c7fed99ff5a5539eda406c87bbfefe8af6ff6b47d92df3187832b5b5d4f",
-            },
-            {
-              location:
-                "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img",
-              arch: "x86_64",
-            },
-            {
-              location:
-                "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img",
-              arch: "aarch64",
-            },
-          ],
-          cpus: 2,
-          memory: 2 * 1024 * 1024 * 1024,
-          mounts: [
-            { location: "~", writable: true },
-            { location: `/tmp/${APP_NAME}`, writable: true },
-          ],
-          ssh: { localPort: await this.sshPort },
-          caCerts: { removeDefaults: null, files: null, certs: null },
-          containerd: { system: null, user: null },
-          cpuType: { aarch64: null, x86_64: null },
-          firmware: { legacyBIOS: null },
-          video: { display: null },
-          networks: null,
-          propagateProxyEnv: null,
-          hostResolver: {
-            enabled: null,
-            ipv6: null,
-            hosts: {
-              [`host.${APP_NAME}.internal`]: "host.lima.internal",
-            },
-          },
-        });
-
-        const CONFIG_PATH = path.join(
-          this.limaHome,
-          "_config",
-          `${this.instance}.yaml`
-        );
-
-        await fs.promises.mkdir(path.dirname(CONFIG_PATH), {
-          recursive: true,
-        });
-        await fs.promises.writeFile(
-          CONFIG_PATH,
-          yaml.stringify(config),
-          "utf-8"
-        );
-
-        this.emit(events.VM_INIT_OUTPUT, "Starting virtual machine");
-
-        await this.lima("start", "--tty=false", CONFIG_PATH);
-      }
-    } finally {
-      this.emit(events.VM_INIT_END);
-    }
-
-    return true;
   }
 }
